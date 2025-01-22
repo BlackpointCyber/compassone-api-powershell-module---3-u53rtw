@@ -122,12 +122,12 @@ jobs:
         uses: actions/checkout@v2
       
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: powershell
       
       - name: Run security scan
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:powershell"
           severity: ${{ env.SECURITY_SEVERITY_THRESHOLD }}
