@@ -1,0 +1,59 @@
+version: 2
+updates:
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    reviewers:
+      - "CODEOWNERS"
+    open-pull-requests-limit: 10
+
+  # Docker dependencies for development, testing and documentation environments
+  - package-ecosystem: "docker"
+    directory: "/infrastructure/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    reviewers:
+      - "CODEOWNERS"
+    open-pull-requests-limit: 10
+
+  # PowerShell module dependencies
+  - package-ecosystem: "nuget"
+    directory: "/src/scripts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "powershell"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    reviewers:
+      - "CODEOWNERS"
+    open-pull-requests-limit: 10
+    ignore:
+      # Maintain PowerShell 5.1 compatibility
+      - dependency-name: "PowerShellStandard.Library"
+        versions: ["< 5.1.0"]
