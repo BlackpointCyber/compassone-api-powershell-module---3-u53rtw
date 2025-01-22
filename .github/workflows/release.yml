@@ -145,7 +145,7 @@ jobs:
           Get-FileHash -Path ./${{ env.ARTIFACT_NAME }}.zip -Algorithm SHA512 | Out-File ./${{ env.ARTIFACT_NAME }}.sha512
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             ./${{ env.ARTIFACT_NAME }}.zip
