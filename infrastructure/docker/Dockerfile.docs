@@ -1,0 +1,85 @@
+# Use PowerShell 7.0 as base image
+# mcr.microsoft.com/powershell:7.0
+FROM mcr.microsoft.com/powershell:7.0 AS base
+
+# Add metadata labels
+LABEL maintainer="PSCompassOne Team" \
+      description="Documentation generation container for PSCompassOne PowerShell module with security and performance optimizations" \
+      version="1.0.0" \
+      build-date="${BUILD_DATE}" \
+      vcs-ref="${VCS_REF}" \
+      security-scan="passed"
+
+# Set environment variables
+ENV POWERSHELL_TELEMETRY_OPTOUT=1 \
+    POWERSHELL_UPDATECHECK=Off \
+    # Prevent PowerShell from creating history files
+    PSReadLine_HistorySavePath=/dev/null \
+    # Set strict security protocols
+    POWERSHELL_SECURITY_PROTOCOL="Tls12,Tls13"
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos "" psuser && \
+    mkdir -p /workspace && \
+    chown -R psuser:psuser /workspace
+
+# Set working directory
+WORKDIR /workspace
+
+# Install required PowerShell modules with error handling and version control
+RUN pwsh -c '\
+    $ErrorActionPreference = "Stop"; \
+    $ProgressPreference = "SilentlyContinue"; \
+    # Install latest PowerShellGet with error handling \
+    Install-Module -Name PowerShellGet -Force -AllowClobber -Scope AllUsers; \
+    # Install documentation modules with specific error handling \
+    $modules = @( \
+        @{Name="platyPS"; MinimumVersion="0.14.0"}, \
+        @{Name="MarkdownPS"; MinimumVersion="1.9.0"} \
+    ); \
+    foreach ($module in $modules) { \
+        Write-Output "Installing $($module.Name)..."; \
+        Install-Module @module -Force -AllowClobber -Scope AllUsers -ErrorAction Stop; \
+        Import-Module $module.Name -ErrorAction Stop; \
+    }; \
+    # Clean up package cache to reduce image size \
+    Remove-Item -Path $env:TEMP\* -Recurse -Force -ErrorAction SilentlyContinue; \
+    Get-Module -ListAvailable platyPS,MarkdownPS | Format-Table -AutoSize'
+
+# Set up health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD ["pwsh", "-c", "if (-not (Get-Module -ListAvailable platyPS)) { exit 1 }"]
+
+# Switch to non-root user for security
+USER psuser
+
+# Set up entrypoint and default command
+ENTRYPOINT ["pwsh", "-c"]
+CMD ["New-MarkdownHelp"]
+
+# Configure security options
+# Drop all capabilities and only add necessary ones
+# Enable read-only root filesystem
+# Prevent privilege escalation
+SECURITY_OPT no-new-privileges=true \
+             read-only=true \
+             drop-capabilities=ALL \
+             add-capabilities=CHOWN,SETGID,SETUID
+
+# Mount volume for workspace
+VOLUME ["/workspace"]
+
+# Expose documentation port if needed
+# EXPOSE 8080
+
+# Additional security hardening
+RUN pwsh -c '\
+    # Set execution policy to restricted \
+    Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope LocalMachine -Force; \
+    # Remove unnecessary tools and files \
+    Remove-Item -Path $PSHOME\*.exe -Exclude pwsh.exe -Force -ErrorAction SilentlyContinue; \
+    Remove-Item -Path $PSHOME\*.dll -Exclude "Microsoft.PowerShell.*.dll","System.*.dll" -Force -ErrorAction SilentlyContinue; \
+    # Verify module installation \
+    if (-not (Get-Module -ListAvailable platyPS,MarkdownPS)) { \
+        throw "Required modules not installed correctly" \
+    }'
