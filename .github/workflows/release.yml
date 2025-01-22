@@ -1,0 +1,175 @@
+name: PSCompassOne Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  POWERSHELL_VERSION: '7.2'
+  BUILD_CONFIGURATION: 'Release'
+  MODULE_NAME: 'PSCompassOne'
+  ARTIFACT_NAME: 'PSCompassOne-Release'
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    name: Production Release
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          lfs: true
+          persist-credentials: false
+
+      - name: Setup Build Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.local/share/powershell/Modules
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.psd1', '**/module.build.psd1') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup PowerShell
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: ${{ env.POWERSHELL_VERSION }}
+
+      - name: Install Dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.20.0 -Force
+          Install-Module -Name platyPS -RequiredVersion 0.14.2 -Force
+          Install-Module -Name PowerShellGet -RequiredVersion 2.2.5 -Force -AllowClobber
+          Install-Module -Name Microsoft.PowerShell.SecretStore -RequiredVersion 1.0.0 -Force
+
+      - name: Validate Module Requirements
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifestPath = "./src/scripts/PSCompassOne.psd1"
+          $manifest = Test-ModuleManifest -Path $manifestPath
+          if (-not $manifest) {
+            throw "Invalid module manifest"
+          }
+          Write-Output "Module Version: $($manifest.Version)"
+          Write-Output "PowerShell Version Required: $($manifest.PowerShellVersion)"
+
+      - name: Run Security Analysis
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./src/scripts -Settings PSGallery -Recurse -Severity Error
+          if ($results) {
+            throw "PSScriptAnalyzer found $($results.Count) critical issues"
+          }
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          $testResults = ./infrastructure/scripts/build.ps1 -Task Test -Configuration $env:BUILD_CONFIGURATION
+          if (-not $testResults.Success) {
+            throw "Tests failed: $($testResults.FailedCount) failures"
+          }
+
+      - name: Build Module
+        shell: pwsh
+        run: |
+          $buildParams = @{
+            Configuration = $env:BUILD_CONFIGURATION
+            OutputPath = "./out"
+            Sign = $true
+            SigningCertificate = [Convert]::FromBase64String('${{ secrets.SIGNING_CERTIFICATE }}')
+            SigningPassword = '${{ secrets.SIGNING_PASSWORD }}'
+          }
+          $result = ./infrastructure/scripts/build.ps1 -Task Build @buildParams
+          if (-not $result.Success) {
+            throw "Build failed: $($result.Error)"
+          }
+
+      - name: Validate Build Output
+        shell: pwsh
+        run: |
+          $validateParams = @{
+            BuildPath = "./out"
+            ValidationRules = @{
+              RequiredFiles = @(
+                'PSCompassOne.psd1',
+                'PSCompassOne.psm1',
+                'Config/PSCompassOne.types.ps1xml',
+                'Config/PSCompassOne.format.ps1xml'
+              )
+              SignatureRequired = $true
+            }
+          }
+          $validation = ./infrastructure/scripts/build.ps1 -Task ValidateBuild @validateParams
+          if (-not $validation.Success) {
+            throw "Build validation failed: $($validation.Error)"
+          }
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        run: |
+          $publishParams = @{
+            Path = "./out"
+            Credentials = @{
+              PSGallery = '${{ secrets.PSGALLERY_API_KEY }}'
+            }
+            ReleaseType = 'Production'
+            Targets = @('PSGallery')
+          }
+          $result = ./infrastructure/scripts/publish.ps1 -Task Publish @publishParams
+          if (-not $result.Success) {
+            throw "Publication failed: $($result.Error)"
+          }
+
+      - name: Create GitHub Release Assets
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./out/* -DestinationPath ./${{ env.ARTIFACT_NAME }}.zip
+          Get-FileHash -Path ./${{ env.ARTIFACT_NAME }}.zip -Algorithm SHA512 | Out-File ./${{ env.ARTIFACT_NAME }}.sha512
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./${{ env.ARTIFACT_NAME }}.zip
+            ./${{ env.ARTIFACT_NAME }}.sha512
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Deployment
+        shell: pwsh
+        run: |
+          Start-Sleep -Seconds 300  # Allow for PSGallery indexing
+          $module = Find-Module -Name $env:MODULE_NAME -RequiredVersion ${{ github.ref_name }}
+          if (-not $module) {
+            throw "Module verification failed"
+          }
+          Write-Output "Successfully verified module publication"
+
+      - name: Archive Build Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-logs
+          path: |
+            ./out/logs/
+            ./out/test-results/
+          retention-days: 30
