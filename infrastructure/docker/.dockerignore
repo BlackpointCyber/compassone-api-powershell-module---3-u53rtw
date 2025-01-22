@@ -1,0 +1,101 @@
+.git/
+.github/
+**/.gitignore
+
+# Development Environment
+.vs/
+.vscode/
+**/node_modules/
+**/*.psd1.dev
+
+# Build and Binary Output
+**/obj/
+**/bin/
+**/TestResults/
+
+# Security and Credentials
+**/*.key
+**/*.pfx
+**/*.snk
+**/SecretStore/
+**/*.log
+
+# Documentation
+**/*.md
+**/README.md
+**/CHANGELOG.md
+**/LICENSE
+
+# Testing
+**/*.Tests.ps1
+**/Tests/
+
+# Development Container Specific
+dev-context: {
+    **/Tests/
+    **/*.Tests.ps1
+    **/TestResults/
+    docs/**
+    infrastructure/deployment/
+    **/CHANGELOG.md
+}
+
+# Test Container Specific
+test-context: {
+    infrastructure/deployment/
+    .github/
+    docs/
+    **/examples/
+    **/samples/
+}
+
+# Documentation Container Specific
+docs-context: {
+    infrastructure/
+    **/Tests/
+    **/*.Tests.ps1
+    **/TestResults/
+    **/examples/
+    **/samples/
+}
+
+# Temporary and Cache Files
+**/*.tmp
+**/*.temp
+**/*.cache
+
+# Module Development
+**/debug.log
+**/error.log
+**/*.bak
+
+# Container Build Artifacts
+**/*.tar
+**/*.gz
+**/*.zip
+
+# IDE and Editor Files
+**/*.suo
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+
+# PowerShell Module Specific
+**/PSScriptAnalyzerSettings.psd1
+**/*.pssproj
+**/*.ps1xml.dev
+
+# Package Management
+**/packages/
+**/bower_components/
+
+# Local Configuration
+**/*.local
+**/*.local.*
+**/*.development.*
+
+# Misc
+**/thumbs.db
+**/.DS_Store
+**/*.swp
+**/*~
