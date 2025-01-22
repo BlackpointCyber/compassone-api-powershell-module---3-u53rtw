@@ -1,0 +1,136 @@
+TOPIC
+    about_PSCompassOne
+
+SHORT DESCRIPTION
+    Provides secure, efficient programmatic access to Blackpoint's CompassOne cybersecurity platform through native PowerShell commands.
+
+LONG DESCRIPTION
+    The PSCompassOne module enables PowerShell users to interact with CompassOne's comprehensive security features through a native PowerShell interface.
+
+    Key capabilities include:
+    - Asset inventory management and monitoring
+    - Security posture assessment and tracking
+    - Incident response automation
+    - Compliance tracking and reporting
+    - Tenant management and configuration
+    - Pipeline support for bulk operations
+    - Secure credential management
+    - Cross-platform compatibility
+
+ARCHITECTURE
+    PSCompassOne implements a layered architecture:
+
+    1. PowerShell Interface Layer
+       - Public cmdlets for API operations
+       - Parameter validation and processing
+       - Pipeline support implementation
+
+    2. Business Logic Layer
+       - Core operation handling
+       - Data transformation
+       - Cache management
+       - Error handling
+
+    3. API Communication Layer
+       - REST API integration
+       - Authentication management
+       - Response processing
+       - Security enforcement
+
+COMPONENTS
+    1. Asset Management
+       - Get-Asset: Retrieve asset information
+       - New-Asset: Create new assets
+       - Set-Asset: Update asset properties
+       - Remove-Asset: Delete assets
+
+    2. Finding Management
+       - Get-Finding: Retrieve security findings
+       - New-Finding: Create findings
+       - Set-Finding: Update findings
+       - Remove-Finding: Delete findings
+
+    3. Incident Management
+       - Get-Incident: Retrieve incidents
+       - New-Incident: Create incidents
+       - Set-Incident: Update incidents
+       - Remove-Incident: Delete incidents
+
+    4. Configuration
+       - Connect-CompassOne: Establish connection
+       - Disconnect-CompassOne: Close connection
+       - Set-CompassOneConfig: Configure module
+
+AUTHENTICATION
+    PSCompassOne supports multiple authentication methods:
+
+    1. API Key Authentication
+       - Secure storage in SecretStore
+       - Environment variable support
+       - Command-line parameter
+
+    2. Session Management
+       - Automatic token refresh
+       - Secure token storage
+       - Connection pooling
+
+    3. Security Best Practices
+       - TLS 1.2+ encryption
+       - FIPS compliance
+       - Credential protection
+
+EXAMPLES
+    1. Connect to CompassOne:
+       Connect-CompassOne -Url 'https://api.compassone.blackpoint.io' -ApiKey 'your-api-key'
+
+    2. Retrieve Assets:
+       Get-Asset -Filter 'Type eq Device'
+       Get-Asset -Id 'asset-id'
+
+    3. Pipeline Operations:
+       Get-Asset | Where-Object {$_.Status -eq 'Active'} | Set-Asset -Status 'Inactive'
+
+    4. Bulk Operations:
+       $assets | New-Finding -Type 'SecurityAlert' -Severity 'High'
+
+    5. Error Handling:
+       try {
+           Get-Asset -ErrorAction Stop
+       } catch {
+           Write-Error $_.Exception.Message
+       }
+
+NOTES
+    System Requirements:
+    - PowerShell 5.1+ (Windows PowerShell)
+    - PowerShell 7.0+ (PowerShell Core)
+    - Internet connectivity
+    - Valid CompassOne API credentials
+
+    Performance Considerations:
+    - Use pipeline for bulk operations
+    - Implement proper error handling
+    - Consider rate limiting
+    - Utilize caching when appropriate
+
+    Security Notes:
+    - Store credentials securely
+    - Use latest TLS version
+    - Follow least privilege principle
+    - Monitor audit logs
+
+SEE ALSO
+    Online Documentation:
+    - https://docs.blackpoint.io/pscompassone
+
+    Related Commands:
+    - Get-Asset
+    - Get-Finding
+    - Get-Incident
+    - Connect-CompassOne
+    - Set-CompassOneConfig
+
+    Additional Topics:
+    - about_PSCompassOne_Security
+    - about_PSCompassOne_Pipeline
+    - about_PSCompassOne_ErrorHandling
