@@ -1,0 +1,43 @@
+# Stage 1: Base image with security optimizations
+FROM mcr.microsoft.com/powershell:7.0 AS base
+
+# Set working directory
+WORKDIR /workspace
+
+# Configure PowerShell environment
+ENV POWERSHELL_TELEMETRY_OPTOUT=1
+ENV POWERSHELL_UPDATECHECK=Off
+ENV PESTER_MIN_VERSION=5.0.0
+
+# Security updates and cleanup
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Test environment setup
+FROM base AS test
+
+# Install and verify Pester and PSScriptAnalyzer
+RUN pwsh -c 'Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -ErrorAction Stop' && \
+    pwsh -c 'Install-Module -Name PSScriptAnalyzer -Force -ErrorAction Stop' && \
+    pwsh -c 'if (-not (Get-Module -ListAvailable Pester)) { throw "Pester installation failed" }' && \
+    pwsh -c 'if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) { throw "PSScriptAnalyzer installation failed" }'
+
+# Mount point for module source code
+VOLUME /workspace
+
+# Health check to verify test environment
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ["pwsh", "-c", "Get-Module -ListAvailable Pester,PSScriptAnalyzer"]
+
+# Set entrypoint for test execution with error handling
+ENTRYPOINT ["pwsh", "-c"]
+CMD ["try { Invoke-Pester -CI } catch { Write-Error $_; exit 1 }"]
+
+# Labels for container metadata
+LABEL maintainer="Blackpoint"
+LABEL description="PSCompassOne test runner container"
+LABEL version="1.0"
+LABEL org.opencontainers.image.source="https://github.com/blackpoint/pscompassone"
+LABEL org.opencontainers.image.licenses="MIT"
