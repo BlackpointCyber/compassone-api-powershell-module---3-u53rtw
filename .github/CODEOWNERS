@@ -1,0 +1,34 @@
+# Acts as a fallback for files not explicitly matched
+* @repo-maintainers
+
+# Core module files requiring both core maintainer and security team review
+src/scripts/PSCompassOne.ps* @core-maintainers @security-team
+
+# Public cmdlet implementations requiring interface and core review
+src/scripts/Public/** @cmdlet-reviewers @core-maintainers
+
+# Private implementation files requiring core team review
+src/scripts/Private/** @core-maintainers
+
+# Authentication and cryptography files requiring additional security review
+src/scripts/Private/**/Auth*.ps1 @core-maintainers @security-team
+src/scripts/Private/**/Crypto*.ps1 @core-maintainers @security-team
+
+# Test files requiring test team review
+src/scripts/Tests/** @test-maintainers
+
+# Security and compliance test files requiring additional security review
+src/scripts/Tests/Security/** @test-maintainers @security-team
+src/scripts/Tests/Compliance/** @test-maintainers @security-team
+
+# CI/CD workflows requiring both DevOps and security review
+.github/workflows/** @devops-team @security-team
+
+# Infrastructure code requiring DevOps team review
+infrastructure/** @devops-team
+
+# Documentation files requiring docs team review
+*.md @docs-maintainers
+
+# Security documentation requiring both security and docs team review
+SECURITY.md @security-team @docs-maintainers
