@@ -1,0 +1,199 @@
+name: PSCompassOne CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  TEST_CONFIGURATION: Release
+  CODE_COVERAGE_THRESHOLD: 90
+  DOCUMENTATION_COVERAGE_THRESHOLD: 100
+  SECURITY_SEVERITY_THRESHOLD: high
+
+jobs:
+  build:
+    name: Build Module
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Setup PowerShell
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: '7.0'
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.local/share/powershell/Modules
+            ~/Library/Caches/powershell/Modules
+            ~\Documents\PowerShell\Modules
+          key: ${{ runner.os }}-powershell-${{ hashFiles('**/PSCompassOne.psd1') }}
+          restore-keys: |
+            ${{ runner.os }}-powershell-
+      
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.20.0 -Force
+          Install-Module -Name platyPS -RequiredVersion 0.14.2 -Force
+          Install-Module -Name Pester -RequiredVersion 5.3.1 -Force
+          Install-Module -Name Microsoft.PowerShell.SecretStore -Force
+      
+      - name: Build module
+        shell: pwsh
+        run: |
+          ./src/scripts/build.ps1 -BuildConfiguration $env:TEST_CONFIGURATION -OutputPath ./out
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: module-package
+          path: |
+            ./out/PSCompassOne*
+            ./out/docs/*
+
+  test:
+    name: Test Module
+    needs: build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        powershell-version: ['5.1', '7.0', '7.2']
+        exclude:
+          - os: ubuntu-latest
+            powershell-version: '5.1'
+          - os: macos-latest
+            powershell-version: '5.1'
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Setup PowerShell
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: ${{ matrix.powershell-version }}
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: module-package
+          path: ./out
+      
+      - name: Install test dependencies
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -RequiredVersion 5.3.1 -Force
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.20.0 -Force
+      
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ./infrastructure/scripts/test.ps1 -Configuration $env:TEST_CONFIGURATION
+      
+      - name: Validate code coverage
+        shell: pwsh
+        run: |
+          $coverageReport = Get-Content ./out/tests/CoverageReport.json | ConvertFrom-Json
+          if ($coverageReport.CoveragePercent -lt $env:CODE_COVERAGE_THRESHOLD) {
+            throw "Code coverage ($($coverageReport.CoveragePercent)%) is below threshold ($env:CODE_COVERAGE_THRESHOLD%)"
+          }
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.powershell-version }}
+          path: ./out/tests/*
+
+  security:
+    name: Security Scan
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: powershell
+      
+      - name: Run security scan
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:powershell"
+          severity: ${{ env.SECURITY_SEVERITY_THRESHOLD }}
+      
+      - name: Upload security results
+        uses: actions/upload-artifact@v2
+        with:
+          name: security-results
+          path: ./results/security-scan.sarif
+
+  documentation:
+    name: Documentation Validation
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      
+      - name: Setup PowerShell
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: '7.0'
+      
+      - name: Install documentation tools
+        shell: pwsh
+        run: |
+          Install-Module -Name platyPS -RequiredVersion 0.14.2 -Force
+      
+      - name: Validate documentation
+        shell: pwsh
+        run: |
+          $docFiles = Get-ChildItem -Path ./docs -Recurse -Filter *.md
+          $totalCommands = (Get-Command -Module PSCompassOne).Count
+          $documentedCommands = ($docFiles | Where-Object { $_.Name -match '\.md$' }).Count
+          $coverage = [math]::Round(($documentedCommands / $totalCommands) * 100, 2)
+          
+          if ($coverage -lt $env:DOCUMENTATION_COVERAGE_THRESHOLD) {
+            throw "Documentation coverage ($coverage%) is below threshold ($env:DOCUMENTATION_COVERAGE_THRESHOLD%)"
+          }
+      
+      - name: Upload documentation results
+        uses: actions/upload-artifact@v2
+        with:
+          name: documentation-validation
+          path: ./docs/*
+
+  publish:
+    name: Publish Module
+    needs: [test, security, documentation]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: module-package
+          path: ./out
+      
+      - name: Setup PowerShell
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: '7.0'
+      
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        run: |
+          Publish-Module -Path ./out/PSCompassOne -NuGetApiKey ${{ secrets.PSGALLERY_API_KEY }} -Verbose
