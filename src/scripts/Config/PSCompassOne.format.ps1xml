@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+    <ViewDefinitions>
+        <!-- Asset View Definitions -->
+        <View>
+            <Name>PSCompassOne.Asset.TableView</Name>
+            <ViewSelectedBy>
+                <TypeName>PSCompassOne.Asset</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Id</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>30</Width>
+                        <Label>Name</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>15</Width>
+                        <Label>Status</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>20</Width>
+                        <Label>LastSeenOn</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>20</Width>
+                        <Label>Tags</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>Id</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Name</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    switch ($_.Status) {
+                                        'Active' { $Host.UI.RawUI.ForegroundColor = 'Green'; $_.Status; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'Inactive' { $Host.UI.RawUI.ForegroundColor = 'Gray'; $_.Status; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'Warning' { $Host.UI.RawUI.ForegroundColor = 'Yellow'; $_.Status; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'Critical' { $Host.UI.RawUI.ForegroundColor = 'Red'; $_.Status; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        default { $_.Status }
+                                    }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    $timeSpan = [DateTime]::UtcNow - $_.LastSeenOn
+                                    if ($timeSpan.TotalDays -gt 1) { "$([Math]::Floor($timeSpan.TotalDays))d ago" }
+                                    elseif ($timeSpan.TotalHours -gt 1) { "$([Math]::Floor($timeSpan.TotalHours))h ago" }
+                                    else { "$([Math]::Floor($timeSpan.TotalMinutes))m ago" }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    $_.Tags -join ', '
+                                </ScriptBlock>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+
+        <!-- Finding View Definitions -->
+        <View>
+            <Name>PSCompassOne.Finding.TableView</Name>
+            <ViewSelectedBy>
+                <TypeName>PSCompassOne.Finding</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Id</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>40</Width>
+                        <Label>Title</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Severity</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>15</Width>
+                        <Label>Status</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Score</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>Id</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Title</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    switch ($_.Severity) {
+                                        'Critical' { $Host.UI.RawUI.ForegroundColor = 'Red'; $_.Severity; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'High' { $Host.UI.RawUI.ForegroundColor = 'DarkRed'; $_.Severity; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'Medium' { $Host.UI.RawUI.ForegroundColor = 'Yellow'; $_.Severity; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'Low' { $Host.UI.RawUI.ForegroundColor = 'Green'; $_.Severity; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        default { $_.Severity }
+                                    }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Status</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    "{0:N1}" -f $_.Score
+                                </ScriptBlock>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+
+        <!-- Incident View Definitions -->
+        <View>
+            <Name>PSCompassOne.Incident.TableView</Name>
+            <ViewSelectedBy>
+                <TypeName>PSCompassOne.Incident</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Id</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>40</Width>
+                        <Label>Title</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>10</Width>
+                        <Label>Priority</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>15</Width>
+                        <Label>Status</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Width>20</Width>
+                        <Label>TicketUrl</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>Id</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Title</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    switch ($_.Priority) {
+                                        'P1' { $Host.UI.RawUI.ForegroundColor = 'Red'; $_.Priority; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'P2' { $Host.UI.RawUI.ForegroundColor = 'Yellow'; $_.Priority; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'P3' { $Host.UI.RawUI.ForegroundColor = 'Green'; $_.Priority; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        'P4' { $Host.UI.RawUI.ForegroundColor = 'Blue'; $_.Priority; $Host.UI.RawUI.ForegroundColor = 'White' }
+                                        default { $_.Priority }
+                                    }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Status</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    if (-not [string]::IsNullOrEmpty($_.TicketUrl)) {
+                                        "`e]8;;$($_.TicketUrl)`e\Ticket Link`e]8;;`e\"
+                                    }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+    </ViewDefinitions>
+</Configuration>
