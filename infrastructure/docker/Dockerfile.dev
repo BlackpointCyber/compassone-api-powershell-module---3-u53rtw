@@ -1,0 +1,114 @@
+# Stage 1: Base image with security hardening
+FROM mcr.microsoft.com/powershell:7.0-alpine AS base
+# Version: 7.0-alpine
+
+# Set environment variables for security and configuration
+ENV POWERSHELL_TELEMETRY_OPTOUT=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    POWERSHELL_UPDATECHECK=Off \
+    DEBIAN_FRONTEND=noninteractive \
+    WORKSPACE=/workspace
+
+# Install system dependencies with version pinning
+RUN apk add --no-cache \
+    ca-certificates=20230506-r0 \
+    tzdata=2023c-r0 \
+    libstdc++=12.2.1_git20220924-r10 \
+    zlib=1.2.13-r1 \
+    libgcc=12.2.1_git20220924-r10 \
+    # Security patches and updates
+    && apk upgrade --no-cache \
+    # Verify package signatures
+    && apk verify /lib/apk/db/installed \
+    # Clean up
+    && rm -rf /var/cache/apk/*
+
+# Configure PowerShell security policies
+RUN pwsh -NoProfile -Command \
+    'Set-ExecutionPolicy RemoteSigned -Scope Process; \
+    $ErrorActionPreference = "Stop"; \
+    Set-PSRepository PSGallery -InstallationPolicy Trusted'
+
+# Stage 2: Builder for tools and dependencies
+FROM base AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    curl=8.1.2-r0 \
+    tar=1.34-r3 \
+    gzip=1.12-r1
+
+# Download and verify code-server
+RUN curl -fsSL -o code-server.tar.gz \
+    https://github.com/coder/code-server/releases/download/v4.16.1/code-server-4.16.1-linux-amd64.tar.gz \
+    && echo "$(curl -fsSL https://github.com/coder/code-server/releases/download/v4.16.1/code-server-4.16.1-linux-amd64.tar.gz.sha256) code-server.tar.gz" | sha256sum -c - \
+    && tar -xzf code-server.tar.gz \
+    && mv code-server-4.16.1-linux-amd64 /code-server \
+    && rm code-server.tar.gz
+
+# Stage 3: Final development environment
+FROM base AS development
+
+# Install git with security patches
+RUN apk add --no-cache \
+    git=2.40.1-r0 \
+    openssh-client=9.3_p2-r0 \
+    # Development tools
+    nano=7.2-r1 \
+    bash=5.2.15-r5
+
+# Copy code-server from builder
+COPY --from=builder /code-server /usr/local/code-server
+ENV PATH="/usr/local/code-server/bin:$PATH"
+
+# Install PowerShell development modules
+RUN pwsh -NoProfile -Command \
+    'Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.21.0 -Force; \
+    Install-Module -Name Pester -RequiredVersion 5.4.1 -Force; \
+    Install-Module -Name platyPS -RequiredVersion 0.14.2 -Force'
+
+# Create and configure workspace with proper permissions
+RUN mkdir -p ${WORKSPACE} \
+    && chmod 755 ${WORKSPACE} \
+    && chown -R root:root ${WORKSPACE}
+
+# Configure VS Code extensions directory
+RUN mkdir -p /root/.local/share/code-server/extensions \
+    && chmod 755 /root/.local/share/code-server/extensions
+
+# Add security labels
+LABEL org.opencontainers.image.source="https://github.com/blackpoint/pscompassone" \
+    org.opencontainers.image.description="PSCompassOne Development Environment" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.version="1.0.0" \
+    org.opencontainers.image.vendor="Blackpoint" \
+    com.blackpoint.image.security.scan-date="2023-06-15"
+
+# Configure health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD ["pwsh", "-c", "Test-NetConnection -ComputerName localhost -Port 8080"]
+
+# Set resource limits
+ENV DOTNET_GCHeapHardLimit=2147483648 \
+    DOTNET_ThreadPool_MaxThreads=100
+
+# Expose ports
+EXPOSE 8080 9090
+
+# Configure volumes
+VOLUME [ "/workspace", "/root/.local/share/code-server/extensions" ]
+
+# Set working directory
+WORKDIR ${WORKSPACE}
+
+# Set entrypoint and default command
+ENTRYPOINT [ "pwsh", "-NoLogo", "-NoProfile", "-Command" ]
+CMD [ "code-server", "--auth", "none", "--bind-addr", "0.0.0.0:8080", "/workspace" ]
+
+# Apply security hardening
+RUN adduser -D -H -s /sbin/nologin vscode \
+    && chmod 700 /root \
+    && chmod 755 /usr/local/code-server/bin/code-server \
+    # Remove unnecessary tools and files
+    && rm -rf /tmp/* \
+    && rm -rf /var/cache/apk/*
