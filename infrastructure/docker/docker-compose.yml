@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        POWERSHELL_VERSION: '7.3'
+        VSCODE_VERSION: 'latest'
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+        read_only: false
+    environment:
+      - POWERSHELL_TELEMETRY_OPTOUT=1
+      - DOTNET_CLI_TELEMETRY_OPTOUT=1
+      - POWERSHELL_UPDATECHECK=Off
+      - DOCKER_BUILDKIT=1
+      - DOTNET_GCHeapHardLimit=2147483648
+      - DOTNET_ThreadPool_MaxThreads=100
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "pwsh", "-c", "Test-Path /workspace"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - pscompassone
+    ulimits:
+      nproc: 100
+      nofile:
+        soft: 20000
+        hard: 40000
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpu_shares: 1024
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        POWERSHELL_VERSION: '7.3'
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+        read_only: true
+    command: ["pwsh", "-c", "Invoke-Pester"]
+    environment:
+      - POWERSHELL_TELEMETRY_OPTOUT=1
+      - PESTER_ENABLE_TELEMETRY=0
+      - PESTER_MIN_VERSION=5.0.0
+    healthcheck:
+      test: ["CMD", "pwsh", "-c", "Get-Module -ListAvailable Pester"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: "no"
+    networks:
+      - pscompassone
+    mem_limit: 1g
+    cpu_shares: 512
+
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile.docs
+      args:
+        POWERSHELL_VERSION: '7.3'
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace
+        read_only: false
+    command: ["pwsh", "-c", "New-MarkdownHelp"]
+    environment:
+      - POWERSHELL_TELEMETRY_OPTOUT=1
+      - POWERSHELL_SECURITY_PROTOCOL=Tls12,Tls13
+      - PSReadLine_HistorySavePath=/dev/null
+    healthcheck:
+      test: ["CMD", "pwsh", "-c", "Get-Module -ListAvailable platyPS"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: "no"
+    networks:
+      - pscompassone
+    mem_limit: 1g
+    cpu_shares: 512
+
+networks:
+  pscompassone:
+    driver: bridge
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.name: pscompassone0
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+    labels:
+      com.blackpoint.network.description: "PSCompassOne development network"
+      com.blackpoint.network.security.internal: "true"
+
+volumes:
+  workspace:
+    driver: local
+    driver_opts:
+      type: none
+      device: .
+      o: bind
+    labels:
+      com.blackpoint.volume.description: "PSCompassOne workspace volume"
+      com.blackpoint.volume.backup: "true"
