@@ -166,7 +166,7 @@ jobs:
           gh release create @releaseParams
 
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: PSCompassOne-${{ needs.validate.outputs.module_version }}
           path: ./out
@@ -191,7 +191,7 @@ jobs:
           $report | ConvertTo-Json | Out-File deployment-report.json
 
       - name: Upload Deployment Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-report
           path: deployment-report.json
