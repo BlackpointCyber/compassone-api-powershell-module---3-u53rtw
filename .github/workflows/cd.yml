@@ -1,0 +1,206 @@
+name: PSCompassOne Continuous Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'Production'
+        type: choice
+        options:
+          - Production
+          - Preview
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  POWERSHELL_VERSION: '7.2'
+  BUILD_CONFIGURATION: 'Release'
+  RELEASE_TYPE: ${{ github.event.release.prerelease && 'Preview' || 'Production' }}
+  BUILD_VERSION: ${{ github.ref_name }}
+
+jobs:
+  validate:
+    name: Validate Deployment Prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      validation_status: ${{ steps.validation.outputs.status }}
+      module_version: ${{ steps.manifest.outputs.version }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Setup PowerShell Environment
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: ${{ env.POWERSHELL_VERSION }}
+
+      - name: Install Dependencies
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck
+          Install-Module -Name platyPS -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.PowerShell.SecretStore -Force -SkipPublisherCheck
+
+      - name: Validate Module Manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $manifestPath = "./src/scripts/PSCompassOne.psd1"
+          $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
+          Write-Output "::set-output name=version::$($manifest.Version)"
+          
+          if ($manifest.PrivateData.PSData.Prerelease -and '${{ env.RELEASE_TYPE }}' -eq 'Production') {
+            throw "Cannot publish prerelease version to production"
+          }
+
+      - name: Verify Documentation
+        shell: pwsh
+        run: |
+          $docsPath = "./docs"
+          $requiredDocs = @(
+            "about_PSCompassOne.md",
+            "Connect-CompassOne.md",
+            "Get-Asset.md"
+          )
+          foreach ($doc in $requiredDocs) {
+            if (-not (Test-Path (Join-Path $docsPath $doc))) {
+              throw "Required documentation file missing: $doc"
+            }
+          }
+
+      - name: Run Security Scan
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./src/scripts -Settings PSGallery -Severity Error
+          if ($results) {
+            throw "Security scan failed with $($results.Count) critical issues"
+          }
+
+      - name: Validate Build Requirements
+        id: validation
+        shell: pwsh
+        run: |
+          try {
+            . ./infrastructure/scripts/build.ps1
+            $buildResult = Test-InfrastructureBuild -BuildPath "./src/scripts"
+            Write-Output "::set-output name=status::$buildResult"
+          }
+          catch {
+            Write-Error $_
+            Write-Output "::set-output name=status::false"
+            exit 1
+          }
+
+  deploy:
+    name: Deploy PSCompassOne Module
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ env.RELEASE_TYPE }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup PowerShell Environment
+        uses: PowerShell/PowerShell@v1
+        with:
+          powershell-version: ${{ env.POWERSHELL_VERSION }}
+
+      - name: Setup Build Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./build
+            ./out
+          key: ${{ runner.os }}-build-${{ hashFiles('**/module.build.psd1') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Build Module Package
+        shell: pwsh
+        run: |
+          . ./infrastructure/scripts/build.ps1
+          $buildParams = @{
+            Configuration = '${{ env.BUILD_CONFIGURATION }}'
+            OutputPath = './out'
+            BuildVersion = '${{ needs.validate.outputs.module_version }}'
+          }
+          Invoke-InfrastructureBuild @buildParams
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        run: |
+          . ./infrastructure/scripts/publish.ps1
+          $publishParams = @{
+            Path = './out'
+            Credentials = @{
+              PSGallery = '${{ secrets.PSGALLERY_API_KEY }}'
+            }
+            ReleaseType = '${{ env.RELEASE_TYPE }}'
+          }
+          $result = Publish-PSCompassOneModule @publishParams
+          if (-not $result.Success) {
+            throw "Failed to publish module: $($result.Error)"
+          }
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = '${{ needs.validate.outputs.module_version }}'
+          $releaseParams = @{
+            TagName = "v$version"
+            ReleaseName = "PSCompassOne v$version"
+            Draft = $false
+            Prerelease = ('${{ env.RELEASE_TYPE }}' -eq 'Preview')
+          }
+          gh release create @releaseParams
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: PSCompassOne-${{ needs.validate.outputs.module_version }}
+          path: ./out
+          retention-days: 30
+
+  notify:
+    name: Send Deployment Notifications
+    needs: [validate, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Generate Deployment Report
+        shell: pwsh
+        run: |
+          $report = @{
+            Version = '${{ needs.validate.outputs.module_version }}'
+            Environment = '${{ env.RELEASE_TYPE }}'
+            Status = '${{ needs.deploy.result }}'
+            Timestamp = (Get-Date).ToUniversalTime().ToString('u')
+          }
+          $report | ConvertTo-Json | Out-File deployment-report.json
+
+      - name: Upload Deployment Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-report
+          path: deployment-report.json
+          retention-days: 7
+
+      - name: Send Notifications
+        if: always()
+        shell: pwsh
+        run: |
+          $status = '${{ needs.deploy.result }}' -eq 'success' ? 'Successfully deployed' : 'Deployment failed'
+          $message = "$status PSCompassOne v${{ needs.validate.outputs.module_version }} to ${{ env.RELEASE_TYPE }}"
+          Write-Host "::notice::$message"
