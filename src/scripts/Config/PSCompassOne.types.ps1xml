@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Types>
+    <!-- Asset Type Configuration -->
+    <Type>
+        <Name>PSCompassOne.Asset</Name>
+        <Members>
+            <PropertySet>
+                <Name>DefaultDisplayPropertySet</Name>
+                <ReferencedProperties>
+                    <Name>Id</Name>
+                    <Name>Name</Name>
+                    <Name>AssetClass</Name>
+                    <Name>Status</Name>
+                    <Name>LastSeenOn</Name>
+                </ReferencedProperties>
+            </PropertySet>
+            <ScriptMethod>
+                <Name>ToString</Name>
+                <Script>
+                    $status = $this.Status.ToString()
+                    $class = $this.AssetClass.ToString()
+                    $tags = $this.Tags -join ", "
+                    
+                    return @"
+Asset: $($this.Name)
+ID: $($this.Id)
+Class: $class
+Status: $status
+Tags: $tags
+Last Seen: $($this.LastSeenOn.ToString('u'))
+Created: $($this.CreatedOn.ToString('u')) by $($this.CreatedBy)
+"@
+                </Script>
+            </ScriptMethod>
+            <TypeConverter>
+                <TypeName>PSCompassOne.Asset.TypeConverter</TypeName>
+            </TypeConverter>
+            <TypeAdapter>
+                <TypeName>PSCompassOne.Asset.TypeAdapter</TypeName>
+            </TypeAdapter>
+        </Members>
+    </Type>
+
+    <!-- Finding Type Configuration -->
+    <Type>
+        <Name>PSCompassOne.Finding</Name>
+        <Members>
+            <PropertySet>
+                <Name>DefaultDisplayPropertySet</Name>
+                <ReferencedProperties>
+                    <Name>Id</Name>
+                    <Name>Title</Name>
+                    <Name>Severity</Name>
+                    <Name>Status</Name>
+                    <Name>Score</Name>
+                </ReferencedProperties>
+            </PropertySet>
+            <ScriptMethod>
+                <Name>ToString</Name>
+                <Script>
+                    return @"
+Finding: $($this.Title)
+ID: $($this.Id)
+Severity: $($this.Severity)
+Status: $($this.Status)
+Score: $($this.Score)
+Found: $($this.FoundOn.ToString('u'))
+Created: $($this.CreatedOn.ToString('u')) by $($this.CreatedBy)
+"@
+                </Script>
+            </ScriptMethod>
+            <TypeConverter>
+                <TypeName>PSCompassOne.Finding.TypeConverter</TypeName>
+            </TypeConverter>
+            <TypeAdapter>
+                <TypeName>PSCompassOne.Finding.TypeAdapter</TypeName>
+            </TypeAdapter>
+        </Members>
+    </Type>
+
+    <!-- Incident Type Configuration -->
+    <Type>
+        <Name>PSCompassOne.Incident</Name>
+        <Members>
+            <PropertySet>
+                <Name>DefaultDisplayPropertySet</Name>
+                <ReferencedProperties>
+                    <Name>Id</Name>
+                    <Name>Title</Name>
+                    <Name>Status</Name>
+                    <Name>TicketId</Name>
+                    <Name>RelatedFindings</Name>
+                </ReferencedProperties>
+            </PropertySet>
+            <ScriptMethod>
+                <Name>ToString</Name>
+                <Script>
+                    return @"
+Incident: $($this.Title)
+ID: $($this.Id)
+Status: $($this.Status)
+Ticket: $($this.TicketId)
+Related Findings: $($this.RelatedFindings.Count)
+Created: $($this.CreatedOn.ToString('u')) by $($this.CreatedBy)
+$($this.ResolvedOn ? "Resolved: $($this.ResolvedOn.ToString('u')) by $($this.ResolvedBy)" : "")
+"@
+                </Script>
+            </ScriptMethod>
+            <TypeConverter>
+                <TypeName>PSCompassOne.Incident.TypeConverter</TypeName>
+            </TypeConverter>
+            <TypeAdapter>
+                <TypeName>PSCompassOne.Incident.TypeAdapter</TypeName>
+            </TypeAdapter>
+        </Members>
+    </Type>
+</Types>
