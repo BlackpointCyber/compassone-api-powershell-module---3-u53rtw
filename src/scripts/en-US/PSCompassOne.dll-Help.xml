@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10">
+    <command:details>
+      <command:name>Connect-CompassOne</command:name>
+      <command:verb>Connect</command:verb>
+      <command:noun>CompassOne</command:noun>
+      <maml:description>
+        <maml:para>Establishes a secure connection to the CompassOne cybersecurity platform</maml:para>
+      </maml:description>
+      <maml:copyright>
+        <maml:para>Copyright (c) Blackpoint Cyber. All rights reserved.</maml:para>
+      </maml:copyright>
+      <command:verb>Connect</command:verb>
+      <command:noun>CompassOne</command:noun>
+    </command:details>
+    <maml:description>
+      <maml:para>Establishes and maintains a secure authenticated session with the CompassOne platform using provided credentials. Supports API key authentication and secure credential storage.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Connect-CompassOne</maml:name>
+        <command:parameter required="true" position="0" pipelineInput="false">
+          <maml:name>ApiKey</maml:name>
+          <maml:description>
+            <maml:para>Secure API key for authentication. Can be stored in SecretStore for automated operations.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true">SecureString</command:parameterValue>
+        </command:parameter>
+        <command:parameter required="false" position="1" pipelineInput="false">
+          <maml:name>ApiUrl</maml:name>
+          <maml:description>
+            <maml:para>CompassOne API endpoint URL. Defaults to production endpoint if not specified.</maml:para>
+          </maml:description>
+          <command:parameterValue required="false">String</command:parameterValue>
+          <dev:defaultValue>https://api.compassone.blackpoint.io</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" position="2" pipelineInput="false">
+          <maml:name>UseSecretStore</maml:name>
+          <maml:description>
+            <maml:para>Store credentials in SecretStore for future use</maml:para>
+          </maml:description>
+          <command:parameterValue required="false">SwitchParameter</command:parameterValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" position="0" pipelineInput="false">
+        <maml:name>ApiKey</maml:name>
+        <maml:description>
+          <maml:para>Secure API key for authentication. Can be stored in SecretStore for automated operations.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true">SecureString</command:parameterValue>
+        <dev:type>
+          <maml:name>SecureString</maml:name>
+          <maml:uri/>
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" position="1" pipelineInput="false">
+        <maml:name>ApiUrl</maml:name>
+        <maml:description>
+          <maml:para>CompassOne API endpoint URL. Defaults to production endpoint if not specified.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri/>
+        </dev:type>
+        <dev:defaultValue>https://api.compassone.blackpoint.io</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" position="2" pipelineInput="false">
+        <maml:name>UseSecretStore</maml:name>
+        <maml:description>
+          <maml:para>Store credentials in SecretStore for future use</maml:para>
+        </maml:description>
+        <command:parameterValue required="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri/>
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+          <maml:uri/>
+          <maml:description/>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet does not accept pipeline input.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSObject</maml:name>
+          <maml:uri/>
+        </dev:type>
+        <maml:description>
+          <maml:para>Returns a connection status object indicating successful connection.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1: Basic Connection --------------------------</maml:title>
+        <maml:introduction>
+          <maml:para>Connect using an API key stored in a secure string</maml:para>
+        </maml:introduction>
+        <dev:code>Connect-CompassOne -ApiKey $apiKey</dev:code>
+        <dev:remarks>
+          <maml:para>This example shows how to connect to CompassOne using a basic API key authentication.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2: Connection with Secret Store --------------------------</maml:title>
+        <maml:introduction>
+          <maml:para>Connect and store credentials for future use</maml:para>
+        </maml:introduction>
+        <dev:code>Connect-CompassOne -ApiKey $apiKey -UseSecretStore</dev:code>
+        <dev:remarks>
+          <maml:para>This example demonstrates connecting to CompassOne and storing the credentials in SecretStore for future use.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <maml:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>about_PSCompassOne</maml:linkText>
+        <maml:uri/>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Disconnect-CompassOne</maml:linkText>
+        <maml:uri/>
+      </maml:navigationLink>
+    </maml:relatedLinks>
+    <dev:remarks>
+      <maml:para>Notes:</maml:para>
+      <maml:para>- Requires valid API key from CompassOne platform</maml:para>
+      <maml:para>- Supports automatic reconnection on token expiration</maml:para>
+      <maml:para>- Implements secure credential handling</maml:para>
+    </dev:remarks>
+  </command:command>
+
+  <!-- Type definitions -->
+  <dev:types>
+    <dev:type>
+      <maml:name>Asset</maml:name>
+      <maml:description>
+        <maml:para>Represents a managed asset in the CompassOne platform</maml:para>
+      </maml:description>
+      <dev:properties>
+        <dev:property>
+          <dev:name>Id</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Unique identifier for the asset</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>Name</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Display name of the asset</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>AssetClass</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Classification of the asset (Device, Container, etc.)</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>Status</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Current status of the asset</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>Tags</dev:name>
+          <dev:type>String[]</dev:type>
+          <maml:description>
+            <maml:para>Array of tags associated with the asset</maml:para>
+          </maml:description>
+        </dev:property>
+      </dev:properties>
+    </dev:type>
+    <dev:type>
+      <maml:name>Finding</maml:name>
+      <maml:description>
+        <maml:para>Represents a security finding or alert</maml:para>
+      </maml:description>
+      <dev:properties>
+        <dev:property>
+          <dev:name>Id</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Unique identifier for the finding</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>FindingClass</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Classification of the finding</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>Severity</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Severity level of the finding</maml:para>
+          </maml:description>
+        </dev:property>
+        <dev:property>
+          <dev:name>Status</dev:name>
+          <dev:type>String</dev:type>
+          <maml:description>
+            <maml:para>Current status of the finding</maml:para>
+          </maml:description>
+        </dev:property>
+      </dev:properties>
+    </dev:type>
+  </dev:types>
+</helpItems>
