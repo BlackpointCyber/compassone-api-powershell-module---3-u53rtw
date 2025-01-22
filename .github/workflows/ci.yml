@@ -19,7 +19,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Setup PowerShell
         uses: PowerShell/PowerShell@v1
@@ -74,7 +74,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Setup PowerShell
         uses: PowerShell/PowerShell@v1
@@ -119,7 +119,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
@@ -145,7 +145,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Setup PowerShell
         uses: PowerShell/PowerShell@v1
