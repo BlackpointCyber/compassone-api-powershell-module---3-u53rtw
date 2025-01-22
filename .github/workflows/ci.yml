@@ -51,7 +51,7 @@ jobs:
           ./src/scripts/build.ps1 -BuildConfiguration $env:TEST_CONFIGURATION -OutputPath ./out
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: module-package
           path: |
@@ -107,7 +107,7 @@ jobs:
           }
       
       - name: Upload test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.powershell-version }}
           path: ./out/tests/*
@@ -133,7 +133,7 @@ jobs:
           severity: ${{ env.SECURITY_SEVERITY_THRESHOLD }}
       
       - name: Upload security results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: security-results
           path: ./results/security-scan.sarif
@@ -170,7 +170,7 @@ jobs:
           }
       
       - name: Upload documentation results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: documentation-validation
           path: ./docs/*
